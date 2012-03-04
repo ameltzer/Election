@@ -2,12 +2,16 @@ package election_map_viewer;
 
 import java.awt.*;
 import java.awt.geom.Rectangle2D;
-import java.awt.image.ImageObserver;
 import java.io.File;
 import java.io.IOException;
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.Iterator;
 import javax.swing.JPanel;
+
+import dbf_framework.DBFFileIO;
+import dbf_framework.DBFRecord;
+import dbf_framework.DBFTable;
 
 import shp_framework.SHPMap;
 import shp_framework.geometry.SHPPolygon;
@@ -27,12 +31,16 @@ public class ElectionMapRenderer extends JPanel
 {
 	// THE APP, WE NEED IT TO SHARE INFO 
 	private ElectionMapDataModel dataModel;
+	private int polyLocation;
+	private File selection;
+	private File currentMap;
 	
 	// VIEWPORT DATA IS USED FOR ZOOMING IN AND OUT
 	// AND VIEWING ONLY A PORTION OF THE MAP
 	private double viewportCenterX;
 	private double viewportCenterY;
 	private double scale;
+	private boolean county;
 	
 	// THIS HELPS US TO PROVIDE PADDING AROUND THE MAP WE ZOOM TO
 	public static final double SCALE_MAP_DOWN_FACTOR = 0.8;
@@ -53,12 +61,15 @@ public class ElectionMapRenderer extends JPanel
 	/**
 	 * This constructor sets up all the rendering settings and gets
 	 * ready to render the maps as provided by the data model.
+	 * @throws IOException 
 	 */
-	public ElectionMapRenderer(ElectionMapDataModel initDataModel)
+	public ElectionMapRenderer(ElectionMapDataModel initDataModel) throws IOException
 	{
 		// WE'LL NEED THIS DURING RENDERING TO GET WHAT TO RENDER
 		dataModel = initDataModel;
-		
+		polyLocation=-1;
+		selection = new File(ElectionMapFileManager.USA_DBF);
+		currentMap = new File(ElectionMapFileManager.USA_DBF);
 		// DEFAULT VIEWPORT STUFF, WHICH WILL BE CHANGED AS SOON
 		// AS A MAP IS LOADED
 		viewportCenterX = 0;
@@ -68,11 +79,27 @@ public class ElectionMapRenderer extends JPanel
 		// SOME DEFAULT SETUP STUFF
 		setBackground(DEFAULT_BACKGROUND_COLOR);
 	}
+	public Candidate[] updateCandidates(Candidate[] candidates) throws IOException{
+		if(polyLocation!=-1){
+			for(int i=0; i<candidates.length; i++){
+				candidates[i].setVotes(selection,4-(3-i));
+			}
+		}
+		else
+			for(int i=0; i<candidates.length; i++){
+				candidates[i].setVotes(selection, 5-(3-i));
+			}
+		return candidates;
+	}
 	
 	// ACCESSOR METHODS
 	public double getViewportCenterX() { return viewportCenterX; }
 	public double getViewportCenterY() { return viewportCenterY; }
-
+	public void setPolyNumber(int polyNumber) { this.polyLocation = polyNumber;}
+	public int getPolyLocation(){return this.polyLocation;}
+	public void setFile(File file){ this.selection=file;		}
+	public void setCurrentMap(File file){ this.currentMap =file;}
+	public void setCounty(boolean county){ this.county = county;}
 	/*** RENDERING METHODS ***/
 
 	/**
@@ -84,7 +111,15 @@ public class ElectionMapRenderer extends JPanel
 	{
 		// CLEARS THE PANEL TO THE BACKGROUND COLOR (BLUE FOR THE OCEAN)
 		super.paintComponent(g);
-		renderLegend(g, dataModel.getCurrentMapAbbr(), new File(ElectionMapFileManager.USA_DBF));
+		try {
+			if(!county)
+				renderLegend(g);
+			else{
+				double lol = 4;
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		// ONLY RENDER IF THERE IS ACTUALLY A MAP TO DRAW
 		if (dataModel.isMapLoaded())
 		{
@@ -139,36 +174,7 @@ public class ElectionMapRenderer extends JPanel
 			highlightedPolygon.render(g2, scale, viewportCenterX, viewportCenterY, getWidth(), getHeight());
 		}
 	}
-	public void renderLegend(Graphics g, String key, File file){
-		Graphics2D g2 = (Graphics2D)g;
-		g2.drawRect(1000, 600, 260, 150);
-		g2.setColor(new Color(248,248,255));
-		g2.fillRect(1001, 601, 259, 149);
-		g2.setColor(Color.BLACK);
-		g2.setFont(new Font("Times New Roman", Font.BOLD, 20));
-		g2.drawString(key, 1005, 625);
-		Image flag = dataModel.getMiniFlags().get(key);
-		g2.drawImage(flag, 1005, 630, null);
-		g2.setFont(new Font("Times New Roman", Font.PLAIN, 10));
-		try {
-			for(int i=2; i<5; i++){
-				String toRender= this.dataModel.determineVotes(g2,file, i);
-				g2 = this.dataModel.graphicsString(i, g2);
-				g2.drawString(toRender, 1005, 670 + ((i-1) *15));
-			}
-		} 
-		catch (IOException e){
-			e.printStackTrace();
-		}
-		g2.setColor(Color.BLACK);
-		g2.drawLine(1005, 720, 1250, 720);
-		try {
-			g2.drawString(dataModel.totalVotes(file), 1005, 735);
-		}
-		catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
+	
 	/** 
 	 * Renders the title and flag of the current map according to
 	 * the data model. These are rendered at the top of the map.
@@ -199,7 +205,34 @@ public class ElectionMapRenderer extends JPanel
 		// AND RENDER IT
 		g.drawString(title, titleX, titleY);
 	}
-	
+	public void renderLegend(Graphics g) throws IOException{
+		Candidate[] candidates = new Candidate[3];
+		candidates[0] = new Candidate(2, "Barack Obama", Color.BLUE);
+		candidates[1] = new Candidate(3, "John McCain", Color.RED);
+		candidates[2] = new Candidate(4, "Other", Color.GRAY);
+		if(this.dataModel.getStateAbbr().equals("OK")){
+			int five=4;
+			five++;
+		}
+		g.drawRect(1000, 600, 250, 150);
+		g.setColor(new Color(248,248,255));
+		g.fillRect(1001, 601, 249, 149);
+		g.setFont(new Font("Times New Roman", Font.BOLD, 20));
+		g.setColor(Color.BLACK);
+		g.drawString(this.dataModel.getStateAbbr(), 1005, 620);
+		g.drawImage(this.dataModel.getMiniFlags().get(this.dataModel.getStateAbbr()), 1005, 630, null);
+		candidates = this.updateCandidates(candidates);
+		candidates = dataModel.sortArray(candidates);
+		String[] votes = dataModel.buildStrings(candidates, selection);
+		g.setFont(new Font("Times New Roman", Font.PLAIN, 12));
+		for(int i=0; i<votes.length; i++){
+			g.setColor(candidates[i].getColor());
+			g.drawString(votes[i], 1005, 670+((i+1)*13));
+		}
+		g.drawLine(1005, 715, 1200, 715);
+		g.setColor(Color.BLACK);
+		g.drawString(dataModel.totalVotesString(selection), 1005, 730);
+	}
 	// VIEWPORT SETUP FUNCTIONS
 	
 	/**

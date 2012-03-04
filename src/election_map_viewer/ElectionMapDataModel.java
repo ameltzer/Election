@@ -51,6 +51,9 @@ public class ElectionMapDataModel
 	// HERE'S INFO ABOUT THE CURRENT MAP BEING RENDERED
 	private String currentMapName;
 	private String currentMapAbbr;
+	private String stateAbbr;
+	
+	private String currentOverallAbbr;
 	
 	// THIS IS FOR HIGHLIGHTING A PART OF A POLYGON (LIKE A COUNTY OR STATE)
 	private SHPPolygon highlightedPolygon;
@@ -86,6 +89,7 @@ public class ElectionMapDataModel
 		testPoly = new Polygon();
 		flags = new TreeMap<String, Image>();
 		miniFlags = new TreeMap<String, Image>();
+		stateAbbr = "USA";
 		
 		// THE MAP HAS NOT YET BEEN RENDERED
 		mapRendered = false;
@@ -95,13 +99,17 @@ public class ElectionMapDataModel
 	// SIMPLE ACCESSOR METHODS
 	public String 		getCurrentMapName() 		{ return currentMapName; 	}
 	public String 		getCurrentMapAbbr() 		{ return currentMapAbbr; 	}
+	public String		getOverallMapAbbr()			{ return this.currentOverallAbbr; }
 	public SHPPolygon	getHighlightedPolygon()		{ return highlightedPolygon;}
 	public boolean 	isMapLoaded() 			{ return currentMapName != null; 		}
 	public boolean	isMapRendered()			{ return mapRendered;					}
 	public boolean 	isRegionHighlighted()	{ return highlightedPolygon != null; 	}
 	public TreeMap<String, Image> getFlags()  { return flags;							}
 	public TreeMap<String, Image> getMiniFlags() { return miniFlags;				}
-	
+	public ElectionMapRenderer getRenderer() { return renderer;					}
+	public DBFTable getTable()				 { return sections;					}
+	public void setCurrentStateAbbr(String abbr)		{ this.stateAbbr =abbr;}
+	public String getStateAbbr()	{return this.stateAbbr;}
 	// MORE COMPLEX ACCESSOR METHODS
 	
 	/**
@@ -122,26 +130,19 @@ public class ElectionMapDataModel
 		// HOW THIS WORKS SINCE YOU'LL HAVE OTHERS
 		return usaSHP;
 	}
-	public String determineVotes(Graphics g, File file, int candidate) throws IOException{
-		String votes = "";
-		BigDecimal totalVotes = BigDecimal.ZERO;
-		BigDecimal candidateVotes = BigDecimal.ZERO;
-		String theCandidate="";
-		Iterator<DBFRecord> iterator = (new DBFFileIO()).loadDBF(file).getTree().iterator();
-		
-		if(candidate == 2) theCandidate = "Barack Obama";
-		else if(candidate ==3) theCandidate = "John McCain";
-		else theCandidate = "Other";
-		
-		while(iterator.hasNext()){
-			DBFRecord next = iterator.next();
-			candidateVotes = candidateVotes.add(new BigDecimal((Long)next.getData(candidate)));
-			for(int i=2; i<5; i++){
-				totalVotes= totalVotes.add(new BigDecimal((Long)next.getData(i)));
-			}
+	public void setCurrentMapAbbr(String abbr){
+		this.currentMapAbbr = abbr;
+	}
+	public void setOverallMapAbbr(String abbr){
+		this.currentOverallAbbr = abbr;
+	}
+	public String[]  buildStrings(Candidate[] candidates, File file) throws IOException{
+		String[] votes = new String[candidates.length];
+		for(int i=0; i<candidates.length; i++){
+			votes[i] = candidates[i].getName() +": " + candidates[i].getVotes() + " Votes ("
+			+ (candidates[i].getVotes().divide(totalVotes(file), new MathContext(2))).multiply(new BigDecimal(100)).intValue()
+			+"%)";
 		}
-		int percentage =candidateVotes.divide(totalVotes, new MathContext(2)).multiply(new BigDecimal(100)).intValue();
-		votes= theCandidate +": " + candidateVotes.toString() +" Votes ("+ percentage+"%)";
 		return votes;
 	}
 	public BigDecimal candidateVotes(int candidate, File file) throws IOException{
@@ -154,12 +155,13 @@ public class ElectionMapDataModel
 		}
 		return candidateVotes;
 	}
-	public BigDecimal[] sortArray(BigDecimal[] array){
-		BigDecimal temp = new BigDecimal(-1);
+	public Candidate[] sortArray(Candidate[] array) throws IOException{
 		for(int i=0; i<array.length; i++){
+			Candidate temp = new Candidate(2, "temp", Color.black);
+			temp.setDefaultVotes(new BigDecimal(-1));
 			int k=0;
 			for(int j=i; j<array.length; j++){
-				if(temp.compareTo(array[j])<0){
+				if(temp.getVotes().compareTo(array[j].getVotes())<0){
 					temp = array[j];
 					k=j;
 				}
@@ -169,30 +171,28 @@ public class ElectionMapDataModel
 		}
 		return array;
 	}
-	public String totalVotes(File file) throws IOException{
+	public String totalVotesString(File file) throws IOException{
 		String votes ="";
-		Iterator<DBFRecord> record= (new DBFFileIO()).loadDBF(file).getTree().iterator();
-		BigDecimal totalVotes = BigDecimal.ZERO;
-		while(record.hasNext()){
-			DBFRecord next = record.next();
-			for(int i=2; i<5; i++){
-				totalVotes = totalVotes.add(new BigDecimal((Long)next.getData(i)));
-			}
-		}
+		BigDecimal totalVotes = totalVotes(file);
 		votes = "Total: " + totalVotes + "Votes (100%)";
 		return votes;
 	}
-	public Graphics2D graphicsString(int candidate, Graphics g){
-		Graphics2D g2 = (Graphics2D) g;
-		Color theColor = null;
-		
-		if(candidate==2) theColor = Color.BLUE;
-		else if(candidate==3) theColor = Color.RED;
-		else theColor = Color.GRAY;
-		
-		g2.setFont(new Font("Times New Roman",  Font.PLAIN, 14));
-		g2.setColor(theColor);
-		return g2;
+	public BigDecimal totalVotes(File file) throws IOException{
+		Iterator<DBFRecord> record= (new DBFFileIO()).loadDBF(file).getTree().iterator();
+		BigDecimal totalVotes = BigDecimal.ZERO;
+		int position=2;
+		if(file.getAbsolutePath().charAt(69) != 'U')
+		{
+			position--;
+		}
+		while(record.hasNext()){
+			DBFRecord next = record.next();
+			int i=next.getNumFields()-1;
+			for(; i>next.getNumFields()-4; i--){
+				totalVotes = totalVotes.add(new BigDecimal((Long)next.getData(i)));
+			}
+		}
+		return totalVotes;
 	}
 	// MUTATOR METHODS
 	
@@ -307,6 +307,7 @@ public class ElectionMapDataModel
 	{
 		currentMapName = USA_MAP_NAME;
 		currentMapAbbr = USA_MAP_ABBR;
+		this.currentOverallAbbr = USA_MAP_ABBR;
 		usaSHP = initUSAshp;
 	}
 	
@@ -390,6 +391,7 @@ public class ElectionMapDataModel
 			{
 				// MARK THIS ONE FOR HIGHLIGHTING
 				setHighlightedRegion(poly);
+				renderer.setPolyNumber(poly.getRecordNumber()-1);
 				return true;
 			}				
 			else
@@ -398,6 +400,7 @@ public class ElectionMapDataModel
 				poly.setLineColor(Color.black);
 			}
 		}
+		renderer.setPolyNumber(-1);
 		return false;
 	}	
 	

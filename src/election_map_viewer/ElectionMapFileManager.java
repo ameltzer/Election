@@ -26,7 +26,6 @@ public class ElectionMapFileManager
 	public static final String MAPS_DIR = SETUP_DIR + "maps/";
 	public static final String USA_SHP = MAPS_DIR + "USA.shp";
 	public static final String USA_DBF = MAPS_DIR + "USA.dbf";
-
 	// THIS IS THE ICON FOR OUR APP
 	public static final String APP_ICON = SETUP_DIR + "USPresidentialSeal.png";
 

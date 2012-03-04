@@ -1,8 +1,12 @@
 package election_map_viewer.events;
 
 import java.awt.event.*;
+import java.io.File;
+
+import dbf_framework.DBFFileIO;
 
 import election_map_viewer.ElectionMapDataModel;
+import election_map_viewer.ElectionMapFileManager;
 /**
  * Used for managing the event handling for mouse-overs of states or 
  * counties that we can then hightlight.
@@ -34,6 +38,28 @@ public class ElectionMapMouseOverShapeHandler implements MouseMotionListener
 		int x = me.getX();
 		int y = me.getY();
 		dataModel.highlightMapRegion(x, y);
+		if(dataModel.getCurrentMapAbbr()=="USA"){
+			if(dataModel.getRenderer().getPolyLocation()!=-1){
+				dataModel.getRenderer().setFile(new File(ElectionMapFileManager.MAPS_DIR+
+						dataModel.getTable().getTree().get(dataModel.getRenderer().getPolyLocation()).getData(1)+".dbf"));
+				dataModel.setCurrentStateAbbr((String)dataModel.getTable().getTree().get(dataModel.getRenderer().getPolyLocation()).getData(1));
+			}
+			else{
+				dataModel.getRenderer().setFile(new File(ElectionMapFileManager.USA_DBF));
+				dataModel.setCurrentStateAbbr("USA");
+			}
+		}
+		else{
+			if(dataModel.getRenderer().getPolyLocation()!=-1){
+				dataModel.getRenderer().setCounty(true);
+				//dataModel.setCurrentMapAbbr(abbr);
+			}
+			else{
+				//dataModel.getRenderer().setFile(new File(ElectionMapFileManager.MAPS_DIR + dataModel.getCurrentMapAbbr()+".dbf"));
+				dataModel.getRenderer().setCounty(false);
+				dataModel.setCurrentStateAbbr(dataModel.getCurrentMapAbbr());
+			}
+		}
 	}
 
 	// WE WON'T USE THIS ONE

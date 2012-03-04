@@ -1,7 +1,16 @@
 package election_map_viewer;
 
 import java.awt.*;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.io.File;
+import java.io.IOException;
+
 import javax.swing.*;
+
+import shp_framework.SHPData;
+import shp_framework.SHPDataLoader;
+import shp_framework.SHPMap;
 
 import election_map_viewer.events.ElectionMapKeyHandler;
 import election_map_viewer.events.ElectionMapMouseOverShapeHandler;
@@ -23,6 +32,7 @@ public class ElectionMapViewer extends JFrame
 	
 	// FOR RENDERING THE MAP
 	private ElectionMapRenderer renderer;
+	private SHPMap map;
 
 	/**
 	 * This constructor sets up the GUI, including loading the
@@ -84,7 +94,12 @@ public class ElectionMapViewer extends JFrame
 	 */
 	public void layoutGUI()
 	{
-		renderer = new ElectionMapRenderer(dataModel);
+		try {
+			renderer = new ElectionMapRenderer(dataModel);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		add(renderer, BorderLayout.CENTER);
 	}
 	
@@ -106,7 +121,8 @@ public class ElectionMapViewer extends JFrame
 		// THIS WILL LISTEN FOR MOUSE MOVEMENT TO IMPLEMENT POLYGON HIGHLIGHTING
 		ElectionMapMouseOverShapeHandler mosh = new ElectionMapMouseOverShapeHandler(dataModel);
 		renderer.addMouseMotionListener(mosh);
-		
+		//Listens for the click event
+		renderer.addMouseListener(new toState(dataModel));
 		// THIS WILL HANDLE MOUSE CLICKS ON THE WINDOW'S X
 		ElectionMapWindowHandler emwh = new ElectionMapWindowHandler(this);
 		addWindowListener(emwh);
@@ -122,6 +138,7 @@ public class ElectionMapViewer extends JFrame
 		
 		// DISPLAY THE WINDOW
 		frame.setVisible(true);
+
 		// WE'LL WAIT UNTIL WE KNOW THE SIZE OF THE RENDERING
 		// PANEL BEFORE WE ZOOM IN ON THE MAP
 		while (frame.renderer.getWidth() <= 0)
@@ -130,5 +147,35 @@ public class ElectionMapViewer extends JFrame
 			catch(InterruptedException ie) { ie.printStackTrace(); }
 		}
 		frame.renderer.repaint();
+	}
+	public class toState implements MouseListener
+	{
+		ElectionMapDataModel dataModel;
+		public toState(ElectionMapDataModel dataModel){
+			this.dataModel=dataModel;
+		}
+		public void mouseClicked(MouseEvent arg0)
+		{
+			if(this.dataModel.getCurrentMapAbbr().equals("USA"))
+			{
+				ElectionMapRenderer renderer= dataModel.getRenderer();
+				try {
+					map = new SHPDataLoader().loadShapefile(new File(ElectionMapFileManager.MAPS_DIR+
+							dataModel.getTable().getTree().get(dataModel.getRenderer().getPolyLocation()).getData(1)+".shp"));
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				SHPData data =map.getShapefileData();
+				double[] array2 = data.getMBR();
+				
+				renderer.zoom((int)renderer.xCoordinateToPixel(array2[0]), (int)renderer.yCoordinateToPixel(array2[3]), 
+						(int)renderer.xCoordinateToPixel(array2[2]), (int)renderer.yCoordinateToPixel(array2[1]));
+				//renderer.zoom(300, 400, 500, y2)
+			}
+		}
+		public void mouseEntered(MouseEvent arg0) {}
+		public void mouseExited(MouseEvent arg0) {}
+		public void mousePressed(MouseEvent arg0) {}
+		public void mouseReleased(MouseEvent arg0) {}	
 	}
 }
