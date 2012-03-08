@@ -8,8 +8,6 @@ import java.io.IOException;
 
 import javax.swing.*;
 
-import shp_framework.SHPData;
-import shp_framework.SHPDataLoader;
 import shp_framework.SHPMap;
 
 import election_map_viewer.events.ElectionMapKeyHandler;
@@ -20,7 +18,7 @@ import election_map_viewer.events.ElectionMapWindowHandler;
  * This application allows the user to view national and individual
  * state election results for the 2008 US Presidential Elections.
  * 
- * @author Richard McKenna
+ * @author Richard McKenna, Aaron Meltzer
  */
 public class ElectionMapViewer extends JFrame
 {
@@ -150,20 +148,30 @@ public class ElectionMapViewer extends JFrame
 		frame.renderer.repaint();
 		frame.renderer.setFile(new File(ElectionMapFileManager.USA_DBF));
 	}
+	/*
+	 * class for the zooming action
+	 */
 	public class toState implements MouseListener
 	{
+		//@author- Aaron Meltzer
 		ElectionMapDataModel dataModel;
+		/*@params dataModel:ElectionMapDataModel
+		 * 
+		 */
 		public toState(ElectionMapDataModel dataModel){
 			this.dataModel=dataModel;
 		}
+		//@params arg:MouseEVent
 		public void mouseClicked(MouseEvent arg0)
 		{
+			//as long as you are in the USA map you can click to zoom
 			if(this.dataModel.getCurrentMapAbbr().equals("USA"))
 			{
 				dataModel.getRenderer().zoomHandler((String)dataModel.getTable().getTree().
 						get(dataModel.getRenderer().getPolyLocation()).getData(1));
 			}
 		}
+		//we don't want any of these
 		public void mouseEntered(MouseEvent arg0) {}
 		public void mouseExited(MouseEvent arg0) {}
 		public void mousePressed(MouseEvent arg0) {}

@@ -1,7 +1,6 @@
 package election_map_viewer;
 
 import java.awt.Color;
-import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 
@@ -22,13 +21,22 @@ public class Candidate {
 		this.theColor = theColor;
 		this.votes = BigDecimal.ZERO;
 	}
-	//@Returns String
+	//@return: String
 	public String getName(){ return name;	}
+	//@return: BigDecimal
 	public BigDecimal getVotes(){return votes;	}
+	//@return: int
 	public int getPosition(){return position;	}
+	//@return: Color
 	public Color getColor(){return theColor;	}
 	
+	//@params: name:String
 	public void setName(String name){this.name=name;	}
+	
+	/*@params- currentTable:DBFTable, currentRecord:DBFRecord, position:int
+	 * @throws- IOException
+	 * depending on which info is given the votes are either added up or simply set form a specific position.
+	 */
 	public void setVotes(DBFTable currentTable,DBFRecord currentRecord, int position) throws IOException
 	{
 		if(currentTable==null){
@@ -41,5 +49,9 @@ public class Candidate {
 			}
 		}
 	}
+	/*
+	 * @params- votes:BigDecimal 
+	 * in case the votes just need to be set
+	 */
 	public void setDefaultVotes(BigDecimal votes) {this.votes=votes;	}
 }

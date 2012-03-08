@@ -1,16 +1,12 @@
 package election_map_viewer;
 
 import java.awt.*;
-import java.awt.geom.Rectangle2D;
 import java.io.File;
 import java.io.IOException;
-import java.text.NumberFormat;
-import java.util.ArrayList;
 import java.util.Iterator;
 import javax.swing.JPanel;
 
 import dbf_framework.DBFFileIO;
-import dbf_framework.DBFRecord;
 import dbf_framework.DBFTable;
 
 import shp_framework.SHPData;
@@ -82,8 +78,14 @@ public class ElectionMapRenderer extends JPanel
 		// SOME DEFAULT SETUP STUFF
 		setBackground(DEFAULT_BACKGROUND_COLOR);
 	}
+	/*@params- candidates:Candidate[]
+	 * @returns Candidate[]
+	 * @throws- IOException
+	 * updates the candidates votes
+	 */
 	public Candidate[] updateCandidates(Candidate[] candidates) throws IOException{
 		DBFTable currentTable = (new DBFFileIO()).loadDBF(selection);
+		// not selecting a state/county do this. Otherwise send a different set of data
 		if(polyLocation!=-1){
 			for(int i=0; i<candidates.length; i++){
 				candidates[i].setVotes(null,currentTable.getRecord(polyLocation),currentTable.getNumFields()-(3-i));
@@ -212,33 +214,46 @@ public class ElectionMapRenderer extends JPanel
 		// AND RENDER IT
 		g.drawString(title, titleX, titleY);
 	}
+	/*@params- g:Graphics
+	 * @throws- IOException
+	 * This function is responsible for rendering the legend. It sets certain info and calls functions
+	 * which will get the data which this function then renders
+	 */
 	public void renderLegend(Graphics g) throws IOException{
+		//always make sure to reinitialize the candidates so as to not have collision between data from past mouseovers
 		Candidate[] candidates = new Candidate[3];
 		candidates[0] = new Candidate(2, "Barack Obama", Color.BLUE);
 		candidates[1] = new Candidate(3, "John McCain", Color.RED);
 		candidates[2] = new Candidate(4, "Other", Color.GRAY);
-		if(this.dataModel.getStateAbbr().equals("OK")){
-			int five=4;
-			five++;
-		}
+		//draw the rectangle
 		g.drawRect(1000, 600, 250, 150);
+		//set the color to fill
 		g.setColor(new Color(248,248,255));
+		//fill the rectangle
 		g.fillRect(1001, 601, 249, 149);
+		//set the font and color to draw the abbr
 		g.setFont(new Font("Times New Roman", Font.BOLD, 20));
 		g.setColor(Color.BLACK);
 		g.drawString(this.dataModel.getStateAbbr(), 1005, 620);
 		if(dataModel.getCurrentMapAbbr().equals("USA"))
 			this.miniFlagLocation=this.dataModel.getStateAbbr();
+		//draw the miniflag
 		g.drawImage(this.dataModel.getMiniFlags().get(this.miniFlagLocation), 1005, 630, null);
+		//update the candidates
 		candidates = this.updateCandidates(candidates);
+		//sort the candidates
 		candidates = dataModel.sortArray(candidates);
+		//turn them into strings
 		String[] votes = dataModel.buildStrings(candidates, selection);
+		//set the font and loop through to render all the strings
 		g.setFont(new Font("Times New Roman", Font.PLAIN, 12));
 		for(int i=0; i<votes.length; i++){
 			g.setColor(candidates[i].getColor());
 			g.drawString(votes[i], 1005, 670+((i+1)*13));
 		}
+		//draw the horizontal line
 		g.drawLine(1005, 715, 1200, 715);
+		//render the total votes in this given country or state
 		g.setColor(Color.BLACK);
 		g.drawString(dataModel.totalVotesString(selection), 1005, 730);
 	}
@@ -356,8 +371,8 @@ public class ElectionMapRenderer extends JPanel
 			double long2 = longDist2 + viewportCenterX;
 			double lat1 = latDist1 + viewportCenterY;
 			double lat2 = latDist2 + viewportCenterY;
+			//if not Alaska, do this, otherwise zoom to Alaska
 			if(this.polyLocation!=0){
-				System.out.println("path1");
 				viewportCenterX = ((long1 + long2)/2);
 				viewportCenterY = ((lat1 + lat2)/2);
 				// THE PROVIDED RECT WILL LIKELY NOT HAVE THE SAME ASPECT
@@ -371,7 +386,6 @@ public class ElectionMapRenderer extends JPanel
 					scale = scaleX;
 			}
 			else{
-				System.out.println("path2");
 				viewportCenterX = -155;
 				this.viewportCenterY = 60;
 				scale = 8;

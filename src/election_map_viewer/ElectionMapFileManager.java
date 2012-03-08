@@ -4,13 +4,9 @@ import java.awt.Image;
 import java.awt.MediaTracker;
 import java.io.File;
 import java.io.IOException;
-import java.math.BigDecimal;
 
 import javax.imageio.ImageIO;
 import javax.swing.JOptionPane;
-
-import dbf_framework.DBFFileIO;
-import dbf_framework.DBFTable;
 
 import shp_framework.SHPDataLoader;
 import shp_framework.SHPMap;
@@ -20,7 +16,7 @@ import shp_framework.SHPMap;
  * will use the services of the DBF and SHP frameworks for loading those
  * particular file formats.
  * 
- * @author Richard McKenna
+ * @author Richard McKenna, Aaron Meltzer
  **/
 public class ElectionMapFileManager 
 {
@@ -131,6 +127,7 @@ public class ElectionMapFileManager
 		{
 			// LOAD THE USA MAP FILE
 			File shpFile = new File(USA_SHP);
+			//load the SHPMap
 			SHPMap usaSHP = shpLoader.loadShapefile(shpFile);
 			// INITIALIZE THE COLORS
 			dataModel.colorSections(usaSHP, new File(USA_DBF));

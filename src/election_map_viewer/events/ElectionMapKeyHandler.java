@@ -9,7 +9,7 @@ import election_map_viewer.ElectionMapDataModel;
  * This event handler responds to key presses, like when the user
  * presses ESC while viewing a state map.
  * 
- * @author Richard McKenna
+ * @author Richard McKenna, Aaron Meltzer
  */
 public class ElectionMapKeyHandler implements KeyListener
 {
@@ -33,11 +33,7 @@ public class ElectionMapKeyHandler implements KeyListener
 		// STORES THE KEY PRESSED FOR THIS EVENT
 		int key = ke.getKeyCode();
 		if(key==27)
-		{
 			dataModel.getRenderer().zoomHandler("USA");
-		}
-		 //THIS CURRENTLY DOES NOTHING, BUT WE COULD
-		// RESPOND TO KEY PRESSES HERE
 	}
 
 	// THESE ARE NOT USED

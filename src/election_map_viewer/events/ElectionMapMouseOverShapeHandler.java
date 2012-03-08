@@ -7,12 +7,11 @@ import java.io.IOException;
 import dbf_framework.DBFFileIO;
 
 import election_map_viewer.ElectionMapDataModel;
-import election_map_viewer.ElectionMapFileManager;
 /**
  * Used for managing the event handling for mouse-overs of states or 
  * counties that we can then hightlight.
  * 
- * @author Richard McKenna
+ * @author Richard McKenna, Aaron Meltzer
  */
 public class ElectionMapMouseOverShapeHandler implements MouseMotionListener
 {

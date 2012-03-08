@@ -16,7 +16,7 @@ import election_map_viewer.ElectionMapViewer;
  * leaving out the other WindowListener methods, rather than defining
  * our own empty ones.
  * 
- * @author McKilla Gorilla
+ * @author McKilla Gorilla, Aaron Meltzer
  */
 public class ElectionMapWindowHandler extends WindowAdapter
 {
@@ -38,7 +38,9 @@ public class ElectionMapWindowHandler extends WindowAdapter
 	 */
 	public void windowClosing(WindowEvent we)
 	{
+		//give options
 		int response = JOptionPane.showConfirmDialog(null, "Are you sure you want to exit?", "Exit", JOptionPane.YES_NO_OPTION);
+		//exit if they said yes
 		if(response == JOptionPane.YES_OPTION){
 			System.exit(0);
 		}

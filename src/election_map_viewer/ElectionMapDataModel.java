@@ -1,18 +1,11 @@
 package election_map_viewer;
 
 import java.awt.Color;
-import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
 import java.awt.Image;
-import java.awt.MouseInfo;
-import java.awt.Point;
-import java.awt.PointerInfo;
 import java.awt.Polygon;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.math.MathContext;
 import java.util.Iterator;
 import java.util.TreeMap;
@@ -22,7 +15,6 @@ import dbf_framework.DBFRecord;
 import dbf_framework.DBFTable;
 
 import shp_framework.SHPData;
-import shp_framework.SHPDataLoader;
 import shp_framework.SHPMap;
 import shp_framework.geometry.SHPPolygon;
 import shp_framework.geometry.SHPShape;
@@ -33,10 +25,11 @@ import static election_map_viewer.ElectionMapRenderer.*;
  * core data. In in addition to initializing data, it provides service
  * methods for event handlers to use in manipulating the maps.
  * 
- * @author Richard McKenna
+ * @author Richard McKenna, Aaron Meltzer
  **/
 public class ElectionMapDataModel 
 {
+	//the DBFTable of a DBF File
 	private DBFTable sections;
 	// HERE'S THE MAP'S RENDERER, WHICH WE NEED TO NOTIFY WHENEVER
 	// THERE ARE CHANGES TO DATA SO THAT IT REPAINTS ITSELF\
@@ -54,6 +47,7 @@ public class ElectionMapDataModel
 	// HERE'S INFO ABOUT THE CURRENT MAP BEING RENDERED
 	private String currentMapName;
 	private String currentMapAbbr;
+	//abr of a state
 	private String stateAbbr;
 	
 	private String currentOverallAbbr;
@@ -133,23 +127,41 @@ public class ElectionMapDataModel
 		// HOW THIS WORKS SINCE YOU'LL HAVE OTHERS
 		return currentSHP;
 	}
+	/*
+	 * @params- map:SHPMap
+	 */
 	public void setCurrentSHP(SHPMap map){
 		currentSHP=map;
 	}
+	/*
+	 * @params- abbr:Sstring
+	 */
 	public void setCurrentMapAbbr(String abbr){
 		this.currentMapAbbr = abbr;
 	}
+	/*
+	 * @params- abbr:Sstring
+	 */
 	public void setOverallMapAbbr(String abbr){
 		this.currentOverallAbbr = abbr;
 	}
+	/*@params- candidates:Candidate[], file:File
+	 * @returns- String[]
+	 * @throws- IOException
+	 * This function takes an array of candidates and a file, extracts information from the file and adds them to the
+	 * correct candidate. It then constructs the string for a specific candidate and stores it in an array.
+	 * Finally it returns the array of Strings for future use
+	 */
 	public String[]  buildStrings(Candidate[] candidates, File file) throws IOException{
 		String[] votes = new String[candidates.length];
 		DBFRecord theRecord;
 		DBFTable currentTable = (new DBFFileIO().loadDBF(file));
+		//if a state is selected
 		if(renderer.getPolyLocation()!=-1)
 			theRecord = (currentTable.getRecord(renderer.getPolyLocation()));
 		else
 			theRecord = currentTable.getRecord(0);//default record, only to satisfy the arguments
+		//for each candidate create a string
 		for(int i=0; i<candidates.length; i++){
 			BigDecimal divisor = totalVotes(file, theRecord);
 			BigDecimal numerator = candidates[i].getVotes();
@@ -163,11 +175,16 @@ public class ElectionMapDataModel
 		}
 		return votes;
 	}
+	/*@params number:BigDecimal
+	 * @returns- String
+	 * this function takes in a number, makes it a string and adds in the commas
+	 */
 	public String addCommas(BigDecimal number){
 		String numberString=number.toString();
 		int[] commaPositions = new int[4];
 		int inversePosition=0;
 		int commaIterator=0;
+		//find out where the commas should be placed
 		for(int i= numberString.length()-1; i>=0; i--){
 			if(inversePosition%3==0 && inversePosition!=0){
 				commaPositions[commaIterator]=i;
@@ -175,15 +192,18 @@ public class ElectionMapDataModel
 			}
 			inversePosition++;
 		}
+		//since the above array will be done backward go to the last useful number int he array
 		for(int i=0; i<commaPositions.length; i++){
 			if(commaPositions[i]==0)
 				break;
 			commaIterator= i;
 		}
+		//if numberString.length()%3==1 then a comma needs to be added after the zero place, so move on to the next 0
 		if(numberString.length() % 3==1){
 			commaIterator++;
 		}
 		String temp = "";
+		//add the commas
 		for(int i=0; i<numberString.length(); i++){
 			temp= temp.concat(Character.toString(numberString.charAt(i)));
 			if(commaIterator>-1 && i == commaPositions[commaIterator]){
@@ -193,16 +213,26 @@ public class ElectionMapDataModel
 		}
 		return temp;
 	}
+	/*@params- candidate:int, file:File
+	 * @returns- BigDecimal
+	 */
 	public BigDecimal candidateVotes(int candidate, File file) throws IOException{
+		//start at 0
 		BigDecimal candidateVotes = BigDecimal.ZERO;
 		Iterator<DBFRecord> iterator = (new DBFFileIO()).loadDBF(file).getTree().iterator();
-		
+		//add the candidates votes together. A candidate has a specific point in the array, which the calling
+		//function will be responsible for telling this function.
 		while(iterator.hasNext()){
 			DBFRecord next = iterator.next();
 			candidateVotes = candidateVotes.add(new BigDecimal((Long)next.getData(candidate)));
 		}
 		return candidateVotes;
 	}
+	/*@params- array:Candidate[]
+	 * @returns- Candidate[]
+	 * @throws- IOException
+	 * sorts the candidate array based on who has the most votes
+	 */
 	public Candidate[] sortArray(Candidate[] array) throws IOException{
 		for(int i=0; i<array.length; i++){
 			Candidate temp = new Candidate(2, "temp", Color.black);
@@ -219,18 +249,31 @@ public class ElectionMapDataModel
 		}
 		return array;
 	}
+	/*@params- file:File
+	 * @returns- String
+	 * @throws- IOException
+	 * take info from the file, finds the total number of votes and constructs the string
+	 */
 	public String totalVotesString(File file) throws IOException{
 		String votes ="";
+		//the table
 		DBFTable currentTable = (new DBFFileIO()).loadDBF(file);
 		DBFRecord theRecord=null;
+		//if not selecting a county/state get a certain record
 		if(renderer.getPolyLocation()!=-1)
 			theRecord = (currentTable.getRecord(renderer.getPolyLocation()));
 		else
 			theRecord = currentTable.getRecord(0);//default record, only to satisfy the arguments
 		BigDecimal totalVotes = totalVotes(file, theRecord);
+		//construct string
 		votes = "Total: " + this.addCommas(totalVotes) + "Votes (100%)";
 		return votes;
 	}
+	/*@params- theRecord:DBFRecord, file:File
+	 * @returns- BigDecimal
+	 * @throws- IOException
+	 * A helper method for the method above this calculates the total votes.
+	 */
 	public BigDecimal totalVotes(File file, DBFRecord theRecord) throws IOException{
 		BigDecimal totalVotes = BigDecimal.ZERO;
 		if(renderer.getPolyLocation()==-1){
@@ -324,8 +367,9 @@ public class ElectionMapDataModel
 	}
 	public void colorSections(SHPMap map, File file){
 		try {
+			//set sections to the relevant DBFTable
 			sections = (new DBFFileIO()).loadDBF(file);
-			initShapeColors(map);
+			initShapeColors(map);//color in sections
 		} 
 		catch (IOException e) {
 			e.printStackTrace();
@@ -342,9 +386,12 @@ public class ElectionMapDataModel
 		Iterator<SHPShape> shapesIt = map.shapesIterator();
 		for (int i=0; shapesIt.hasNext(); i++)
 		{
+			//get the next shape
 			SHPShape shape = shapesIt.next();
+			//find the number of fields
 			int numFields = this.sections.getNumFields();
 			DBFRecord record = this.sections.getTree().get(i);
+			//if Obama has more votes, set it to blue. if McCain has more votes, set it to Red. Otherwise, set it to yellow
 			if((Long)record.getData(numFields-3)>(Long)record.getData(numFields-2)){
 				shape.setFillColor(Color.BLUE);
 			}
