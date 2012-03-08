@@ -13,6 +13,8 @@ import dbf_framework.DBFFileIO;
 import dbf_framework.DBFRecord;
 import dbf_framework.DBFTable;
 
+import shp_framework.SHPData;
+import shp_framework.SHPDataLoader;
 import shp_framework.SHPMap;
 import shp_framework.geometry.SHPPolygon;
 import shp_framework.geometry.SHPShape;
@@ -34,6 +36,7 @@ public class ElectionMapRenderer extends JPanel
 	private int polyLocation;
 	private File selection;
 	private File currentMap;
+	private String miniFlagLocation;
 	
 	// VIEWPORT DATA IS USED FOR ZOOMING IN AND OUT
 	// AND VIEWING ONLY A PORTION OF THE MAP
@@ -80,15 +83,17 @@ public class ElectionMapRenderer extends JPanel
 		setBackground(DEFAULT_BACKGROUND_COLOR);
 	}
 	public Candidate[] updateCandidates(Candidate[] candidates) throws IOException{
+		DBFTable currentTable = (new DBFFileIO()).loadDBF(selection);
 		if(polyLocation!=-1){
 			for(int i=0; i<candidates.length; i++){
-				candidates[i].setVotes(selection,4-(3-i));
+				candidates[i].setVotes(null,currentTable.getRecord(polyLocation),currentTable.getNumFields()-(3-i));
 			}
 		}
-		else
+		else{
 			for(int i=0; i<candidates.length; i++){
-				candidates[i].setVotes(selection, 5-(3-i));
+				candidates[i].setVotes(currentTable, null, currentTable.getNumFields()-(3-i));
 			}
+		}
 		return candidates;
 	}
 	
@@ -97,6 +102,8 @@ public class ElectionMapRenderer extends JPanel
 	public double getViewportCenterY() { return viewportCenterY; }
 	public void setPolyNumber(int polyNumber) { this.polyLocation = polyNumber;}
 	public int getPolyLocation(){return this.polyLocation;}
+	public File getCurrentMap(){ return this.currentMap;}
+	public File getFile(){ return this.selection;}
 	public void setFile(File file){ this.selection=file;		}
 	public void setCurrentMap(File file){ this.currentMap =file;}
 	public void setCounty(boolean county){ this.county = county;}
@@ -220,7 +227,9 @@ public class ElectionMapRenderer extends JPanel
 		g.setFont(new Font("Times New Roman", Font.BOLD, 20));
 		g.setColor(Color.BLACK);
 		g.drawString(this.dataModel.getStateAbbr(), 1005, 620);
-		g.drawImage(this.dataModel.getMiniFlags().get(this.dataModel.getStateAbbr()), 1005, 630, null);
+		if(dataModel.getCurrentMapAbbr().equals("USA"))
+			this.miniFlagLocation=this.dataModel.getStateAbbr();
+		g.drawImage(this.dataModel.getMiniFlags().get(this.miniFlagLocation), 1005, 630, null);
 		candidates = this.updateCandidates(candidates);
 		candidates = dataModel.sortArray(candidates);
 		String[] votes = dataModel.buildStrings(candidates, selection);
@@ -250,7 +259,7 @@ public class ElectionMapRenderer extends JPanel
 		double maxLat = viewportCenterY + (latHeight/2);
 	
 		// CORRECT VIEWPORT IF IT WENT OFF THE WESTERN EDGE
-		double diff = minLong - (-180);
+		double diff = minLong - (-220);
 		if (diff < 0)
 		{
 			viewportCenterX -= diff;
@@ -328,7 +337,11 @@ public class ElectionMapRenderer extends JPanel
 	{
 		// ONLY ZOOM IF THIS IS A VALID ZOOM RECTANGLE
 		if ((x2 > x1) && (y2 > y1))
-		{			
+		{
+			if(this.polyLocation>0){
+				int five = 5;
+				five++;
+			}
 			double longWidth = 360/scale;
 			double latHeight = 180/scale;
 			double longPerPixel = longWidth/getWidth();
@@ -343,20 +356,26 @@ public class ElectionMapRenderer extends JPanel
 			double long2 = longDist2 + viewportCenterX;
 			double lat1 = latDist1 + viewportCenterY;
 			double lat2 = latDist2 + viewportCenterY;
-			
-			viewportCenterX = ((long1 + long2)/2);
-			viewportCenterY = ((lat1 + lat2)/2);
-
-			// THE PROVIDED RECT WILL LIKELY NOT HAVE THE SAME ASPECT
-			// RATIO OF THE VIEWPORT, SO LET'S FIGURE OUT 
-			// THE PROPER SCALING FACTORS FOR X AND Y
-			double scaleX = 360/(long2-long1);
-			double scaleY = 180/(lat1-lat2);
-			if (scaleX > scaleY)
-				scale = scaleY;
-			else
-				scale = scaleX;
-			
+			if(this.polyLocation!=0){
+				System.out.println("path1");
+				viewportCenterX = ((long1 + long2)/2);
+				viewportCenterY = ((lat1 + lat2)/2);
+				// THE PROVIDED RECT WILL LIKELY NOT HAVE THE SAME ASPECT
+				// RATIO OF THE VIEWPORT, SO LET'S FIGURE OUT 
+				// THE PROPER SCALING FACTORS FOR X AND Y
+				double scaleX = 360/(long2-long1);
+				double scaleY = 180/(lat1-lat2);
+				if (scaleX > scaleY)
+					scale = scaleY;
+				else
+					scale = scaleX;
+			}
+			else{
+				System.out.println("path2");
+				viewportCenterX = -155;
+				this.viewportCenterY = 60;
+				scale = 8;
+			}
 			// AND NOW LET'S ZOOM OUT SLIGHTLY TO
 			// MAKE IT LOOK A LITTLE BETTER
 			scale *= SCALE_MAP_DOWN_FACTOR;
@@ -442,5 +461,25 @@ public class ElectionMapRenderer extends JPanel
 		double percentY = (yCoord - minLat)/latHeight;
 		yCoord = getHeight() * percentY;
 		return getHeight() - ((int)yCoord);
+	}
+	public void zoomHandler(String abr){
+		String location =ElectionMapFileManager.MAPS_DIR+abr;
+		ElectionMapRenderer renderer= dataModel.getRenderer();
+		SHPMap map =null;
+		try {
+			
+			map = new SHPDataLoader().loadShapefile(new File(location+".shp"));
+			dataModel.setCurrentSHP(map);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		SHPData data =map.getShapefileData();
+		double[] array2 = data.getMBR();
+		renderer.zoom((int)renderer.xCoordinateToPixel(array2[0]), (int)renderer.yCoordinateToPixel(array2[3]), 
+				(int)renderer.xCoordinateToPixel(array2[2]), (int)renderer.yCoordinateToPixel(array2[1]));
+		File currentFile = new File(location+".dbf");
+		dataModel.colorSections(map, currentFile);
+		dataModel.getRenderer().setFile(currentFile);
+		dataModel.setCurrentMapAbbr(abr);
 	}
 }

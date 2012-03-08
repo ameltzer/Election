@@ -5,6 +5,9 @@ import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 
+import dbf_framework.DBFRecord;
+import dbf_framework.DBFTable;
+
 public class Candidate {
 	private String name;
 	private BigDecimal votes;
@@ -23,9 +26,17 @@ public class Candidate {
 	public Color getColor(){return theColor;	}
 	
 	public void setName(String name){this.name=name;	}
-	public void setVotes(File file, int position) throws IOException
+	public void setVotes(DBFTable currentTable,DBFRecord currentRecord, int position) throws IOException
 	{
-		this.votes= (new ElectionMapDataModel()).candidateVotes(position, file);	
+		if(currentTable==null){
+			this.votes= new BigDecimal((Long)currentRecord.getData(position));
+		}
+		else{
+			for(int i=0; i<currentTable.getNumberOfRecords(); i++){
+				Long data = (Long)currentTable.getRecord(i).getData(position);
+				this.votes=this.votes.add(new BigDecimal(data));
+			}
+		}
 	}
 	public void setDefaultVotes(BigDecimal votes) {this.votes=votes;	}
 }

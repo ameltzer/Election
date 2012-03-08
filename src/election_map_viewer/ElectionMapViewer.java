@@ -55,6 +55,7 @@ public class ElectionMapViewer extends JFrame
 	public ElectionMapDataModel getDataModel() 		{ return dataModel; 	}
 	public ElectionMapFileManager getFileManager()	{ return fileManager; 	}
 	public ElectionMapRenderer	getRenderer()		{ return renderer;		}
+	public SHPMap				getMap()			{ return map;			}
 	
 	/**
 	 * Initializes our GUI's window.
@@ -147,6 +148,7 @@ public class ElectionMapViewer extends JFrame
 			catch(InterruptedException ie) { ie.printStackTrace(); }
 		}
 		frame.renderer.repaint();
+		frame.renderer.setFile(new File(ElectionMapFileManager.USA_DBF));
 	}
 	public class toState implements MouseListener
 	{
@@ -158,19 +160,8 @@ public class ElectionMapViewer extends JFrame
 		{
 			if(this.dataModel.getCurrentMapAbbr().equals("USA"))
 			{
-				ElectionMapRenderer renderer= dataModel.getRenderer();
-				try {
-					map = new SHPDataLoader().loadShapefile(new File(ElectionMapFileManager.MAPS_DIR+
-							dataModel.getTable().getTree().get(dataModel.getRenderer().getPolyLocation()).getData(1)+".shp"));
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-				SHPData data =map.getShapefileData();
-				double[] array2 = data.getMBR();
-				
-				renderer.zoom((int)renderer.xCoordinateToPixel(array2[0]), (int)renderer.yCoordinateToPixel(array2[3]), 
-						(int)renderer.xCoordinateToPixel(array2[2]), (int)renderer.yCoordinateToPixel(array2[1]));
-				//renderer.zoom(300, 400, 500, y2)
+				dataModel.getRenderer().zoomHandler((String)dataModel.getTable().getTree().
+						get(dataModel.getRenderer().getPolyLocation()).getData(1));
 			}
 		}
 		public void mouseEntered(MouseEvent arg0) {}

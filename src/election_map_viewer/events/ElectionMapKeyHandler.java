@@ -32,8 +32,11 @@ public class ElectionMapKeyHandler implements KeyListener
 	{
 		// STORES THE KEY PRESSED FOR THIS EVENT
 		int key = ke.getKeyCode();
-		
-		// THIS CURRENTLY DOES NOTHING, BUT WE COULD
+		if(key==27)
+		{
+			dataModel.getRenderer().zoomHandler("USA");
+		}
+		 //THIS CURRENTLY DOES NOTHING, BUT WE COULD
 		// RESPOND TO KEY PRESSES HERE
 	}
 

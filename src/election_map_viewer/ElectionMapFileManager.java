@@ -4,9 +4,13 @@ import java.awt.Image;
 import java.awt.MediaTracker;
 import java.io.File;
 import java.io.IOException;
+import java.math.BigDecimal;
 
 import javax.imageio.ImageIO;
 import javax.swing.JOptionPane;
+
+import dbf_framework.DBFFileIO;
+import dbf_framework.DBFTable;
 
 import shp_framework.SHPDataLoader;
 import shp_framework.SHPMap;
@@ -26,6 +30,7 @@ public class ElectionMapFileManager
 	public static final String MAPS_DIR = SETUP_DIR + "maps/";
 	public static final String USA_SHP = MAPS_DIR + "USA.shp";
 	public static final String USA_DBF = MAPS_DIR + "USA.dbf";
+	
 	// THIS IS THE ICON FOR OUR APP
 	public static final String APP_ICON = SETUP_DIR + "USPresidentialSeal.png";
 
@@ -127,7 +132,6 @@ public class ElectionMapFileManager
 			// LOAD THE USA MAP FILE
 			File shpFile = new File(USA_SHP);
 			SHPMap usaSHP = shpLoader.loadShapefile(shpFile);
-			
 			// INITIALIZE THE COLORS
 			dataModel.colorSections(usaSHP, new File(USA_DBF));
 			// AND UPDATE THE GUI

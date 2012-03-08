@@ -22,6 +22,7 @@ import dbf_framework.DBFRecord;
 import dbf_framework.DBFTable;
 
 import shp_framework.SHPData;
+import shp_framework.SHPDataLoader;
 import shp_framework.SHPMap;
 import shp_framework.geometry.SHPPolygon;
 import shp_framework.geometry.SHPShape;
@@ -47,6 +48,8 @@ public class ElectionMapDataModel
 
 	// HERE'S WHERE THE USA MAP'S DATA IS STORED
 	private SHPMap usaSHP;
+	
+	private SHPMap currentSHP;
 	
 	// HERE'S INFO ABOUT THE CURRENT MAP BEING RENDERED
 	private String currentMapName;
@@ -128,7 +131,10 @@ public class ElectionMapDataModel
 	{
 		// WE ONLY HAVE ONE FOR NOW, YOU MIGHT WANT TO CHANGE
 		// HOW THIS WORKS SINCE YOU'LL HAVE OTHERS
-		return usaSHP;
+		return currentSHP;
+	}
+	public void setCurrentSHP(SHPMap map){
+		currentSHP=map;
 	}
 	public void setCurrentMapAbbr(String abbr){
 		this.currentMapAbbr = abbr;
@@ -138,12 +144,54 @@ public class ElectionMapDataModel
 	}
 	public String[]  buildStrings(Candidate[] candidates, File file) throws IOException{
 		String[] votes = new String[candidates.length];
+		DBFRecord theRecord;
+		DBFTable currentTable = (new DBFFileIO().loadDBF(file));
+		if(renderer.getPolyLocation()!=-1)
+			theRecord = (currentTable.getRecord(renderer.getPolyLocation()));
+		else
+			theRecord = currentTable.getRecord(0);//default record, only to satisfy the arguments
 		for(int i=0; i<candidates.length; i++){
-			votes[i] = candidates[i].getName() +": " + candidates[i].getVotes() + " Votes ("
-			+ (candidates[i].getVotes().divide(totalVotes(file), new MathContext(2))).multiply(new BigDecimal(100)).intValue()
-			+"%)";
+			BigDecimal divisor = totalVotes(file, theRecord);
+			BigDecimal numerator = candidates[i].getVotes();
+			if(divisor.intValue()==0){
+				divisor=BigDecimal.ONE;
+				numerator=BigDecimal.ZERO;
+			}
+			votes[i] = candidates[i].getName() +": " + addCommas(candidates[i].getVotes()) + " Votes ("
+			+ (numerator.divide(divisor,new MathContext(2))).multiply(new BigDecimal(100)).intValue()
+					+"%)";
 		}
 		return votes;
+	}
+	public String addCommas(BigDecimal number){
+		String numberString=number.toString();
+		int[] commaPositions = new int[4];
+		int inversePosition=0;
+		int commaIterator=0;
+		for(int i= numberString.length()-1; i>=0; i--){
+			if(inversePosition%3==0 && inversePosition!=0){
+				commaPositions[commaIterator]=i;
+				commaIterator++;
+			}
+			inversePosition++;
+		}
+		for(int i=0; i<commaPositions.length; i++){
+			if(commaPositions[i]==0)
+				break;
+			commaIterator= i;
+		}
+		if(numberString.length() % 3==1){
+			commaIterator++;
+		}
+		String temp = "";
+		for(int i=0; i<numberString.length(); i++){
+			temp= temp.concat(Character.toString(numberString.charAt(i)));
+			if(commaIterator>-1 && i == commaPositions[commaIterator]){
+				temp=temp.concat(",");
+				commaIterator--;
+			}
+		}
+		return temp;
 	}
 	public BigDecimal candidateVotes(int candidate, File file) throws IOException{
 		BigDecimal candidateVotes = BigDecimal.ZERO;
@@ -173,25 +221,32 @@ public class ElectionMapDataModel
 	}
 	public String totalVotesString(File file) throws IOException{
 		String votes ="";
-		BigDecimal totalVotes = totalVotes(file);
-		votes = "Total: " + totalVotes + "Votes (100%)";
+		DBFTable currentTable = (new DBFFileIO()).loadDBF(file);
+		DBFRecord theRecord=null;
+		if(renderer.getPolyLocation()!=-1)
+			theRecord = (currentTable.getRecord(renderer.getPolyLocation()));
+		else
+			theRecord = currentTable.getRecord(0);//default record, only to satisfy the arguments
+		BigDecimal totalVotes = totalVotes(file, theRecord);
+		votes = "Total: " + this.addCommas(totalVotes) + "Votes (100%)";
 		return votes;
 	}
-	public BigDecimal totalVotes(File file) throws IOException{
-		Iterator<DBFRecord> record= (new DBFFileIO()).loadDBF(file).getTree().iterator();
+	public BigDecimal totalVotes(File file, DBFRecord theRecord) throws IOException{
 		BigDecimal totalVotes = BigDecimal.ZERO;
-		int position=2;
-		if(file.getAbsolutePath().charAt(69) != 'U')
-		{
-			position--;
-		}
-		while(record.hasNext()){
-			DBFRecord next = record.next();
-			int i=next.getNumFields()-1;
-			for(; i>next.getNumFields()-4; i--){
-				totalVotes = totalVotes.add(new BigDecimal((Long)next.getData(i)));
+		if(renderer.getPolyLocation()==-1){
+			Iterator<DBFRecord> record= (new DBFFileIO()).loadDBF(file).getTree().iterator();
+			while(record.hasNext()){
+				DBFRecord next = record.next();
+				for(int i=0; i<3; i++){
+					totalVotes = totalVotes.add(new BigDecimal((Long)next.getData(next.getNumFields()-(3-i))));
+				}
 			}
 		}
+		else{
+			for(int i=0; i<3; i++)
+				totalVotes = totalVotes.add(new BigDecimal((Long)theRecord.getData(theRecord.getNumFields()-(3-i))));
+		}
+			
 		return totalVotes;
 	}
 	// MUTATOR METHODS
@@ -268,7 +323,6 @@ public class ElectionMapDataModel
 		fileManager = initFileManager;
 	}
 	public void colorSections(SHPMap map, File file){
-		String name = "";
 		try {
 			sections = (new DBFFileIO()).loadDBF(file);
 			initShapeColors(map);
@@ -289,12 +343,17 @@ public class ElectionMapDataModel
 		for (int i=0; shapesIt.hasNext(); i++)
 		{
 			SHPShape shape = shapesIt.next();
+			int numFields = this.sections.getNumFields();
 			DBFRecord record = this.sections.getTree().get(i);
-			if((Long)record.getData(2)>(Long)record.getData(3)){
+			if((Long)record.getData(numFields-3)>(Long)record.getData(numFields-2)){
 				shape.setFillColor(Color.BLUE);
 			}
-			else
+			else if((Long)record.getData(numFields-3)<(Long)record.getData(numFields-2)){
 				shape.setFillColor(Color.RED);
+			}
+			else{
+				shape.setFillColor(Color.YELLOW);
+			}
 		}
 	}	
 
@@ -309,6 +368,7 @@ public class ElectionMapDataModel
 		currentMapAbbr = USA_MAP_ABBR;
 		this.currentOverallAbbr = USA_MAP_ABBR;
 		usaSHP = initUSAshp;
+		currentSHP= usaSHP;
 	}
 	
 	/**

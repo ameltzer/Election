@@ -2,6 +2,7 @@ package election_map_viewer.events;
 
 import java.awt.event.*;
 import java.io.File;
+import java.io.IOException;
 
 import dbf_framework.DBFFileIO;
 
@@ -38,26 +39,14 @@ public class ElectionMapMouseOverShapeHandler implements MouseMotionListener
 		int x = me.getX();
 		int y = me.getY();
 		dataModel.highlightMapRegion(x, y);
-		if(dataModel.getCurrentMapAbbr()=="USA"){
-			if(dataModel.getRenderer().getPolyLocation()!=-1){
-				dataModel.getRenderer().setFile(new File(ElectionMapFileManager.MAPS_DIR+
-						dataModel.getTable().getTree().get(dataModel.getRenderer().getPolyLocation()).getData(1)+".dbf"));
-				dataModel.setCurrentStateAbbr((String)dataModel.getTable().getTree().get(dataModel.getRenderer().getPolyLocation()).getData(1));
-			}
-			else{
-				dataModel.getRenderer().setFile(new File(ElectionMapFileManager.USA_DBF));
-				dataModel.setCurrentStateAbbr("USA");
-			}
-		}
-		else{
-			if(dataModel.getRenderer().getPolyLocation()!=-1){
-				dataModel.getRenderer().setCounty(true);
-				//dataModel.setCurrentMapAbbr(abbr);
-			}
-			else{
-				//dataModel.getRenderer().setFile(new File(ElectionMapFileManager.MAPS_DIR + dataModel.getCurrentMapAbbr()+".dbf"));
-				dataModel.getRenderer().setCounty(false);
-				dataModel.setCurrentStateAbbr(dataModel.getCurrentMapAbbr());
+		DBFFileIO input = new DBFFileIO();
+		if(dataModel.getCurrentMapAbbr()=="USA" && dataModel.getRenderer().getPolyLocation()!=-1){
+			try {
+				int location = dataModel.getRenderer().getPolyLocation();
+				File currentFile = dataModel.getRenderer().getFile();
+				dataModel.setCurrentStateAbbr((String)input.loadDBF(currentFile).getRecord(location).getData(1));
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
 		}
 	}
