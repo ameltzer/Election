@@ -7,19 +7,22 @@ import java.math.BigDecimal;
 
 import dbf_framework.DBFRecord;
 import dbf_framework.DBFTable;
-
+//@author Aaron Meltzer
 public class Candidate {
+	//keep track of various candidate attributes
 	private String name;
 	private BigDecimal votes;
 	private int position;
 	private Color theColor;
-	
+	/*@params- position:int name:String theColor:Color
+	 */
 	public Candidate(int position, String name, Color theColor) throws IOException{
 		this.position=position; 
 		this.name = name;
 		this.theColor = theColor;
 		this.votes = BigDecimal.ZERO;
 	}
+	//@Returns String
 	public String getName(){ return name;	}
 	public BigDecimal getVotes(){return votes;	}
 	public int getPosition(){return position;	}

@@ -3,6 +3,8 @@ package election_map_viewer.events;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
+import javax.swing.JOptionPane;
+
 import election_map_viewer.ElectionMapFileManager;
 import election_map_viewer.ElectionMapViewer;
 /**
@@ -36,6 +38,9 @@ public class ElectionMapWindowHandler extends WindowAdapter
 	 */
 	public void windowClosing(WindowEvent we)
 	{
-		// CURRENTLY THIS DOES NOTHING
+		int response = JOptionPane.showConfirmDialog(null, "Are you sure you want to exit?", "Exit", JOptionPane.YES_NO_OPTION);
+		if(response == JOptionPane.YES_OPTION){
+			System.exit(0);
+		}
 	}
 }
