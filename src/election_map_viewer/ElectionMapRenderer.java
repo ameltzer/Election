@@ -39,7 +39,6 @@ public class ElectionMapRenderer extends JPanel
 	private double viewportCenterX;
 	private double viewportCenterY;
 	private double scale;
-	private boolean county;
 	
 	// THIS HELPS US TO PROVIDE PADDING AROUND THE MAP WE ZOOM TO
 	public static final double SCALE_MAP_DOWN_FACTOR = 0.8;
@@ -108,7 +107,6 @@ public class ElectionMapRenderer extends JPanel
 	public File getFile(){ return this.selection;}
 	public void setFile(File file){ this.selection=file;		}
 	public void setCurrentMap(File file){ this.currentMap =file;}
-	public void setCounty(boolean county){ this.county = county;}
 	/*** RENDERING METHODS ***/
 
 	/**
@@ -120,15 +118,6 @@ public class ElectionMapRenderer extends JPanel
 	{
 		// CLEARS THE PANEL TO THE BACKGROUND COLOR (BLUE FOR THE OCEAN)
 		super.paintComponent(g);
-		try {
-			if(!county)
-				renderLegend(g);
-			else{
-				double lol = 4;
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 		// ONLY RENDER IF THERE IS ACTUALLY A MAP TO DRAW
 		if (dataModel.isMapLoaded())
 		{
@@ -147,6 +136,11 @@ public class ElectionMapRenderer extends JPanel
 		
 			// NOW THE MAP TITLE
 			renderTitle(g);
+			try {
+				renderLegend(g);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}	
 	
@@ -158,6 +152,7 @@ public class ElectionMapRenderer extends JPanel
 		// WE'LL USE Graphics2D METHODS
 		Graphics2D g2 = (Graphics2D)g;
 		SHPMap mapData = dataModel.getCurrentSHP();
+		System.out.println(mapData.getLocation());
 		if (mapData == null)
 			return;
 		Iterator<SHPShape> shapesIt = mapData.shapesIterator();
@@ -167,7 +162,10 @@ public class ElectionMapRenderer extends JPanel
 		{
 			// GET THE SHAPE
 			SHPShape shape = shapesIt.next();
-			
+			if(dataModel.getCurrentMapAbbr()!="USA"){
+				int five =5;
+				five++;
+			}
 			// AND RENDER IT
 			shape.render(g2, scale, viewportCenterX, viewportCenterY, getWidth(), getHeight());
 			
@@ -476,12 +474,14 @@ public class ElectionMapRenderer extends JPanel
 		yCoord = getHeight() * percentY;
 		return getHeight() - ((int)yCoord);
 	}
+	/*
+	 * @param abr:String
+	 * This map handles zooming including calling the zoom function given to us
+	 */
 	public void zoomHandler(String abr){
 		String location =ElectionMapFileManager.MAPS_DIR+abr;
-		ElectionMapRenderer renderer= dataModel.getRenderer();
 		SHPMap map =null;
-		try {
-			
+		try {		
 			map = new SHPDataLoader().loadShapefile(new File(location+".shp"));
 			dataModel.setCurrentSHP(map);
 		} catch (IOException e) {
@@ -489,11 +489,17 @@ public class ElectionMapRenderer extends JPanel
 		}
 		SHPData data =map.getShapefileData();
 		double[] array2 = data.getMBR();
-		renderer.zoom((int)renderer.xCoordinateToPixel(array2[0]), (int)renderer.yCoordinateToPixel(array2[3]), 
-				(int)renderer.xCoordinateToPixel(array2[2]), (int)renderer.yCoordinateToPixel(array2[1]));
+		this.zoom((int)this.xCoordinateToPixel(array2[0]), (int)this.yCoordinateToPixel(array2[3]), 
+				(int)this.xCoordinateToPixel(array2[2]), (int)this.yCoordinateToPixel(array2[1]));
 		File currentFile = new File(location+".dbf");
 		dataModel.colorSections(map, currentFile);
 		dataModel.getRenderer().setFile(currentFile);
 		dataModel.setCurrentMapAbbr(abr);
+		if(abr!="USA")
+			dataModel.setMapRendered(false);
+		else
+			dataModel.setMapRendered(true);
+		dataModel.resetHighlightedRegion();
+		this.repaint();
 	}
 }

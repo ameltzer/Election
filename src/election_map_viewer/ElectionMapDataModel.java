@@ -353,7 +353,9 @@ public class ElectionMapDataModel
 		// UPDATE THE VIEW
 		renderer.repaint();		
 	}
-	
+	public void recallPaint(){
+		renderer.repaint();
+	}
 	/**
 	 * This method completes the setup of this data model. We'll need the 
 	 * renderer and fileManager to properly process event responses.

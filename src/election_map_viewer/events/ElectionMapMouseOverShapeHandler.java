@@ -48,6 +48,29 @@ public class ElectionMapMouseOverShapeHandler implements MouseMotionListener
 				e.printStackTrace();
 			}
 		}
+		else if(dataModel.getCurrentMapAbbr()!="USA" && dataModel.getRenderer().getPolyLocation()!=-1){
+			try {
+				int location = dataModel.getRenderer().getPolyLocation();
+				File currentFile = dataModel.getRenderer().getFile();
+				dataModel.setCurrentStateAbbr((String)input.loadDBF(currentFile).getRecord(location).getData(0));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		else if(dataModel.getCurrentMapAbbr()!="USA" && dataModel.getRenderer().getPolyLocation()==-1){
+			String nameFile= dataModel.getRenderer().getFile().getName();
+			int i=0;
+			String name ="";
+			while(nameFile.charAt(i)!='.'){
+				name=name.concat(Character.toString(nameFile.charAt(i)));
+				i++;
+			}
+			dataModel.setCurrentStateAbbr(name);
+		}
+		else if(dataModel.getCurrentMapAbbr()=="USA" && dataModel.getRenderer().getPolyLocation()==-1){
+			dataModel.setCurrentStateAbbr("USA");
+		}
+		
 	}
 
 	// WE WON'T USE THIS ONE
